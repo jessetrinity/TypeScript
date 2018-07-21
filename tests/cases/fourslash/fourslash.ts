@@ -183,6 +183,8 @@ declare namespace FourSlashInterface {
             errorCode?: number,
             index?: number,
             preferences?: UserPreferences,
+            applyChanges?: boolean,
+            commands?: {}[],
         });
         codeFixAvailable(options?: ReadonlyArray<VerifyCodeFixAvailableOptions>): void;
         applicableRefactorAvailableAtMarker(markerName: string): void;
@@ -346,6 +348,15 @@ declare namespace FourSlashInterface {
             readonly preferences?: UserPreferences;
         }): void;
         noMoveToNewFile(): void;
+
+        generateTypes(...options: GenerateTypesOptions[]): void;
+    }
+    //mv
+    interface GenerateTypesOptions {
+        readonly name?: string;
+        readonly value: unknown;
+        readonly output?: string | undefined;
+        readonly outputBaseline?: string;
     }
     class edit {
         backspace(count?: number): void;

@@ -85,6 +85,7 @@ namespace ts.projectSystem {
 
         isKnownTypesPackageName = notImplemented;
         installPackage = notImplemented;
+        inspectValue = notImplemented;
 
         executePendingCommands() {
             const actionsToRun = this.postExecActions;

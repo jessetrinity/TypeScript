@@ -4408,6 +4408,10 @@ namespace ts {
         return span.start + span.length;
     }
 
+    export function textRangeLength({ end, pos }: TextRange): number {
+        return end - pos;
+    }
+
     export function textSpanIsEmpty(span: TextSpan) {
         return span.length === 0;
     }
