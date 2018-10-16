@@ -277,6 +277,7 @@ namespace ts.Completions {
         const quoted = JSON.stringify(text);
         switch (preferences.quotePreference) {
             case undefined:
+            case "auto":
             case "double":
                 return quoted;
             case "single":
