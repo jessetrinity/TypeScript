@@ -209,7 +209,8 @@ namespace ts.NavigationBar {
 
             case SyntaxKind.BindingElement:
             case SyntaxKind.VariableDeclaration:
-                const { name, initializer } = <VariableDeclaration | BindingElement>node;
+            case SyntaxKind.PropertyAssignment:
+                const { name, initializer } = <VariableDeclaration | PropertyAssignment | BindingElement>node;
                 if (isBindingPattern(name)) {
                     addChildrenRecursively(name);
                 }
@@ -276,12 +277,12 @@ namespace ts.NavigationBar {
                     case AssignmentDeclarationKind.ModuleExports:
                     case AssignmentDeclarationKind.PrototypeProperty:
                     case AssignmentDeclarationKind.Prototype:
-                        addNodeWithRecursiveChild(node, (node as BinaryExpression).right);
-                        return;
                     case AssignmentDeclarationKind.ThisProperty:
                     case AssignmentDeclarationKind.Property:
-                    case AssignmentDeclarationKind.None:
                     case AssignmentDeclarationKind.ObjectDefinePropertyValue:
+                        addNodeWithRecursiveChild(node, (node as BinaryExpression).right);
+                        return;
+                    case AssignmentDeclarationKind.None:
                     case AssignmentDeclarationKind.ObjectDefinePropertyExports:
                     case AssignmentDeclarationKind.ObjectDefinePrototypeProperty:
                         break;
@@ -479,68 +480,15 @@ namespace ts.NavigationBar {
     function topLevelItems(root: NavigationBarNode): NavigationBarNode[] {
         const topLevel: NavigationBarNode[] = [];
         function recur(item: NavigationBarNode) {
-            if (isTopLevel(item)) {
+            if (item.children) {
                 topLevel.push(item);
-                if (item.children) {
-                    for (const child of item.children) {
-                        recur(child);
-                    }
+                for (const child of item.children) {
+                    recur(child);
                 }
             }
         }
         recur(root);
         return topLevel;
-
-        function isTopLevel(item: NavigationBarNode): boolean {
-            switch (navigationBarNodeKind(item)) {
-                case SyntaxKind.ClassDeclaration:
-                case SyntaxKind.ClassExpression:
-                case SyntaxKind.EnumDeclaration:
-                case SyntaxKind.InterfaceDeclaration:
-                case SyntaxKind.ModuleDeclaration:
-                case SyntaxKind.SourceFile:
-                case SyntaxKind.TypeAliasDeclaration:
-                case SyntaxKind.JSDocTypedefTag:
-                case SyntaxKind.JSDocCallbackTag:
-                    return true;
-
-                case SyntaxKind.Constructor:
-                case SyntaxKind.MethodDeclaration:
-                case SyntaxKind.GetAccessor:
-                case SyntaxKind.SetAccessor:
-                case SyntaxKind.VariableDeclaration:
-                    return hasSomeImportantChild(item);
-
-                case SyntaxKind.ArrowFunction:
-                case SyntaxKind.FunctionDeclaration:
-                case SyntaxKind.FunctionExpression:
-                    return isTopLevelFunctionDeclaration(item);
-
-                default:
-                    return false;
-            }
-            function isTopLevelFunctionDeclaration(item: NavigationBarNode): boolean {
-                if (!(<FunctionDeclaration>item.node).body) {
-                    return false;
-                }
-
-                switch (navigationBarNodeKind(item.parent!)) {
-                    case SyntaxKind.ModuleBlock:
-                    case SyntaxKind.SourceFile:
-                    case SyntaxKind.MethodDeclaration:
-                    case SyntaxKind.Constructor:
-                        return true;
-                    default:
-                        return hasSomeImportantChild(item);
-                }
-            }
-            function hasSomeImportantChild(item: NavigationBarNode): boolean {
-                return some(item.children, child => {
-                    const childKind = navigationBarNodeKind(child);
-                    return childKind !== SyntaxKind.VariableDeclaration && childKind !== SyntaxKind.BindingElement;
-                });
-            }
-        }
     }
 
     function convertToTree(n: NavigationBarNode): NavigationTree {
