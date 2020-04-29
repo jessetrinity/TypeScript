@@ -519,6 +519,10 @@ namespace ts {
         return startEndOverlapsWithStartEnd(node.getStart(sourceFile), node.end, start, end);
     }
 
+    export function nodeContainsStartEnd(node: Node, sourceFile: SourceFile, start: number, end: number) {
+        return node.getStart(sourceFile) <= start && node.end >= end;
+    }
+
     export function startEndOverlapsWithStartEnd(start1: number, end1: number, start2: number, end2: number) {
         const start = Math.max(start1, start2);
         const end = Math.min(end1, end2);

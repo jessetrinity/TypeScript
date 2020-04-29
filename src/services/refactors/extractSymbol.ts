@@ -8,7 +8,7 @@ namespace ts.refactor.extractSymbol {
      * Exported for tests.
      */
     export function getAvailableActions(context: RefactorContext): readonly ApplicableRefactorInfo[] {
-        const rangeToExtract = getRangeToExtract(context.file, getRefactorContextSpan(context));
+        const rangeToExtract = getRangeToExtract(context.file, getRefactorContextSpan(context), context.triggerReason);
 
         const targetRange = rangeToExtract.targetRange;
         if (targetRange === undefined) {
@@ -87,7 +87,7 @@ namespace ts.refactor.extractSymbol {
 
     /* Exported for tests */
     export function getEditsForAction(context: RefactorContext, actionName: string): RefactorEditInfo | undefined {
-        const rangeToExtract = getRangeToExtract(context.file, getRefactorContextSpan(context));
+        const rangeToExtract = getRangeToExtract(context.file, getRefactorContextSpan(context), /* triggerReason */ { kind: "invoked" });
         const targetRange = rangeToExtract.targetRange!; // TODO:GH#18217
 
         const parsedFunctionIndexMatch = /^function_scope_(\d+)$/.exec(actionName);
@@ -186,18 +186,27 @@ namespace ts.refactor.extractSymbol {
      * not shown to the user, but can be used by us diagnostically)
      */
     // exported only for tests
-    export function getRangeToExtract(sourceFile: SourceFile, span: TextSpan): RangeToExtract {
+    export function getRangeToExtract(sourceFile: SourceFile, span: TextSpan, triggerReason?: RefactorTriggerReason): RangeToExtract {
+        const range = createTextRangeFromSpan(span);
         const { length } = span;
+        const explicitCursorRequest = length === 0 && triggerReason?.kind === "invoked";
 
-        if (length === 0) {
+        if (length === 0 && !explicitCursorRequest) {
             return { errors: [createFileDiagnostic(sourceFile, span.start, length, Messages.cannotExtractEmpty)] };
         }
 
         // Walk up starting from the the start position until we find a non-SourceFile node that subsumes the selected span.
-        // This may fail (e.g. you select two statements in the root of a source file)
-        const start = getParentNodeInSpan(getTokenAtPosition(sourceFile, span.start), sourceFile, span);
+        const startToken = getTokenAtPosition(sourceFile, span.start)
+        const start = findAncestor(startToken, (node => node.parent &&
+            (isExpression(node) && (explicitCursorRequest || nodeContainsStartEnd(node, sourceFile, range.pos, range.end)) ||
+            isStatement(node) && isBlockLike(node.parent)))
+        );
         // Do the same for the ending position
-        const end = getParentNodeInSpan(findTokenOnLeftOfPosition(sourceFile, textSpanEnd(span)), sourceFile, span);
+        const endToken = explicitCursorRequest ? getTokenAtPosition(sourceFile, textSpanEnd(span)) : findTokenOnLeftOfPosition(sourceFile, textSpanEnd(span))
+        const end = findAncestor(endToken, (node => node.parent &&
+            (isExpression(node) && (explicitCursorRequest || nodeContainsStartEnd(node, sourceFile, range.pos, range.end)) ||
+                isStatement(node) && isBlockLike(node.parent)))
+        );
 
         const declarations: Symbol[] = [];
 
