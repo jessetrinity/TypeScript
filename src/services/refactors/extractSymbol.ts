@@ -203,7 +203,7 @@ namespace ts.refactor.extractSymbol {
         );
         // Do the same for the ending position
         const endToken = explicitCursorRequest ? getTokenAtPosition(sourceFile, textSpanEnd(span)) : findTokenOnLeftOfPosition(sourceFile, textSpanEnd(span))
-        const end = findAncestor(endToken, (node => node.parent &&
+        const end = endToken === startToken ? start : findAncestor(endToken, (node => node.parent &&
             (isExpression(node) && (explicitCursorRequest || nodeContainsStartEnd(node, sourceFile, range.pos, range.end)) ||
                 isStatement(node) && isBlockLike(node.parent)))
         );
