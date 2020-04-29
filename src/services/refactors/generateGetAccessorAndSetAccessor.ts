@@ -21,7 +21,7 @@ namespace ts.refactor.generateGetAccessorAndSetAccessor {
     }
 
     function getAvailableActions(context: RefactorContext): readonly ApplicableRefactorInfo[] {
-        if (!getConvertibleFieldAtPosition(context)) return emptyArray;
+        if (!getConvertibleFieldAtPosition(context, context.triggerReason)) return emptyArray;
 
         return [{
             name: actionName,
@@ -38,7 +38,7 @@ namespace ts.refactor.generateGetAccessorAndSetAccessor {
     function getEditsForAction(context: RefactorContext, _actionName: string): RefactorEditInfo | undefined {
         const { file } = context;
 
-        const fieldInfo = getConvertibleFieldAtPosition(context);
+        const fieldInfo = getConvertibleFieldAtPosition(context, /*triggerReason*/ { kind: "invoked" });
         if (!fieldInfo) return undefined;
 
         const isJS = isSourceFileJS(file);
@@ -113,14 +113,15 @@ namespace ts.refactor.generateGetAccessorAndSetAccessor {
         return modifiers && createNodeArray(modifiers);
     }
 
-    function getConvertibleFieldAtPosition(context: RefactorContext): Info | undefined {
+    function getConvertibleFieldAtPosition(context: RefactorContext, triggerReason?: RefactorTriggerReason): Info | undefined {
         const { file, startPosition, endPosition } = context;
+        const explicitCursorRequest = startPosition === endPosition && triggerReason?.kind === "invoked";
 
         const node = getTokenAtPosition(file, startPosition);
         const declaration = findAncestor(node.parent, isAcceptedDeclaration);
         // make sure declaration have AccessibilityModifier or Static Modifier or Readonly Modifier
         const meaning = ModifierFlags.AccessibilityModifier | ModifierFlags.Static | ModifierFlags.Readonly;
-        if (!declaration || !nodeOverlapsWithStartEnd(declaration.name, file, startPosition, endPosition!) // TODO: GH#18217
+        if (!declaration || !(nodeOverlapsWithStartEnd(declaration.name, file, startPosition, endPosition!) || explicitCursorRequest) // TODO: GH#18217
             || !isConvertibleName(declaration.name) || (getModifierFlags(declaration) | meaning) !== meaning) return undefined;
 
         const name = declaration.name.text;
